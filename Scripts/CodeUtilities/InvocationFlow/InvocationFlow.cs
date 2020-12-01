@@ -16,9 +16,9 @@ namespace InvocationFlow
     public static class InvocationFlow<TInvokeTarget> where TInvokeTarget : class
     {
         // this delegate is mainly used for Unity3D logic where a behaviour can be destroyed and become invalid for usage.
-        // Unity3D is also the reason we use ReferenceEquals instead of normal nullcheck because they have overloaded the null operator...
-        public static Func<TInvokeTarget, bool> IsValid = null;
-        // ***** invokes "Header" *****
+        public static Func<TInvokeTarget, bool> IsValid = (t) => true;
+        public static Func<TInvokeTarget, bool> IsEnabled = (t) => true;
+
 
         public static void InvokeWhen(TInvokeTarget target, Action func, Func<bool> condition)
         {
@@ -152,8 +152,7 @@ namespace InvocationFlow
                     return false;
                 }
                 func(endVal);
-                if (ReferenceEquals(onComplete, null) == false)
-                    onComplete();
+                onComplete?.Invoke();
                 return true;
             };
         }
@@ -169,8 +168,7 @@ namespace InvocationFlow
                     return false;
                 }
                 func(endVal);
-                if (ReferenceEquals(onComplete, null) == false)
-                    onComplete();
+                onComplete?.Invoke();
                 return true;
             };
         }
@@ -187,8 +185,7 @@ namespace InvocationFlow
                     return false;
                 }
                 func(endVal);
-                if (ReferenceEquals(onComplete, null) == false)
-                    onComplete();
+                onComplete?.Invoke();
                 return true;
             };
         }
@@ -205,8 +202,7 @@ namespace InvocationFlow
                     return false;
                 }
                 func(endVal);
-                if (ReferenceEquals(onComplete, null) == false)
-                    onComplete();
+                onComplete?.Invoke();
                 return true;
             };
         }
@@ -220,6 +216,10 @@ namespace InvocationFlow
         {
             if (iterating)
             {
+                bool complete = func(); // execute this frame in same "timespace" as invocationFlow "parent" that created this while iterating.
+                if (complete)
+                    return;
+
                 if (handlesAddedDuringIteration.ContainsKey(behaviour))
                 {
                     handlesAddedDuringIteration[behaviour].Add(func);
@@ -228,7 +228,7 @@ namespace InvocationFlow
                 {
                     handlesAddedDuringIteration.Add(behaviour, new List<InvocationHandle> { func });
                 }
-                func(); // execute this frame in same "timespace" as invocationFlow "parent" that created this while iterating.
+               
             }
             else if (invocationHandles.ContainsKey(behaviour))
             {
@@ -259,6 +259,9 @@ namespace InvocationFlow
                     keysToRemove.Add(key);
                     continue;
                 }
+                // if target is paused, skip
+                if (IsEnabled(key) == false)
+                    continue;
                 var invocationFlowsCache = invocationHandles[key];
                 for (int i = invocationFlowsCache.Count - 1; 0 <= i; i--)
                 {

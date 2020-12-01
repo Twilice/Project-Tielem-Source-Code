@@ -28,6 +28,19 @@ namespace UnityEngine
             return ReferenceEquals(obj, null) == false;
         }
 
+        /// <summary>
+        /// Find component in children, returns true if found else false. Note that component will be null if not found.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="go"></param>
+        /// <param name="component">Reference to found component</param>
+        /// <returns></returns>
+        public static bool TryFindComponentInChildren<T>(this GameObject go, ref T component)
+        {
+            component = go.GetComponentInChildren<T>();
+            return component != null;
+        }
+
         public static T[] GetComponentsInChildren<T>(this GameObject go, bool includeInactive, int depth) where T : MonoBehaviour
         {
             var childs = go.GetComponentsInChildren<T>(includeInactive);

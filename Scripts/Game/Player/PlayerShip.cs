@@ -1,15 +1,12 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.InputSystem;
-using static InputActions;
 using InvocationFlow;
 using System;
 using System.Linq;
 
-public class PlayerShip : GameEntity, IPlayerActions
+public class PlayerShip : GameEntity
 {
-    public InputActions inputActions;
     public float baseSpeed;
     [NonSerialized]
     public float speed;
@@ -57,9 +54,6 @@ public class PlayerShip : GameEntity, IPlayerActions
     void Awake()
     {
         InitBaseValues();
-        inputActions = new InputActions();
-        inputActions.Player.SetCallbacks(this);
-        inputActions.Player.Enable();
 
         shieldEnergyConsumer.Init(this);
         energyConsumers.Add(shieldEnergyConsumer);
@@ -137,7 +131,6 @@ public class PlayerShip : GameEntity, IPlayerActions
 
     public void RegisterPrimaryWeapon(PrimaryWeapon primaryWeapon)
     {
-
         this.primaryWeapon = primaryWeapon;
         weaponRegistered = true;
 
@@ -147,14 +140,11 @@ public class PlayerShip : GameEntity, IPlayerActions
         OnStartFiringListeners += primaryWeapon.OnStartFiring;
         OnStopFiringListeners += primaryWeapon.OnStopFiring;
 
-        foreach (var weapon in primaryWeapon.activeWeaponSlot.weapons)
+        foreach (var weapon in primaryWeapon.weaponSlots.SelectMany(slot => slot.weapons))
         {
             if (weapon.energyConsumer.IsUnused == false)
                 energyConsumers.Add(weapon.energyConsumer);
         }
-
-        if (primaryWeapon.energyConsumer.IsUnused == false)
-            energyConsumers.Add(primaryWeapon.energyConsumer);
 
         primaryWeapon.gameObject.SetActive(true);
     }
@@ -180,14 +170,11 @@ public class PlayerShip : GameEntity, IPlayerActions
         OnStartFiringListeners -= primaryWeapon.OnStartFiring;
         OnStopFiringListeners -= primaryWeapon.OnStopFiring;
 
-        foreach (var weapon in primaryWeapon.activeWeaponSlot.weapons)
+        foreach (var weapon in primaryWeapon.weaponSlots.SelectMany(slot => slot.weapons))
         {
             if (weapon.energyConsumer.IsUnused == false)
                 energyConsumers.Remove(weapon.energyConsumer);
         }
-
-        if (primaryWeapon.energyConsumer.IsUnused == false)
-            energyConsumers.Remove(primaryWeapon.energyConsumer);
 
         primaryWeapon.gameObject.SetActive(false);
     }
@@ -203,11 +190,12 @@ public class PlayerShip : GameEntity, IPlayerActions
             stoppedFiringArgs.TotalTimeFired += Time.deltaTime;
         UpdateEnergy();
         UpdateShield();
-        Move();
     }
 
     void LateUpdate()
     {
+        if (GameCoordinator.instance.gameField == null) return;
+
         var bottomLeft = cameraCorners[0];
         var topLeft = cameraCorners[1];
         var topRight = cameraCorners[2];
@@ -348,6 +336,13 @@ public class PlayerShip : GameEntity, IPlayerActions
 
         preventDuplicateExplosion = true;
         var spawnedExplosion = Instantiate(takeDamageExplosion, transform.position, takeDamageExplosion.transform.rotation * transform.rotation);
+        if (GameCoordinator.instance.currentSceneType != GameCoordinator.SceneType.Level)
+        {
+            foreach (var audio in spawnedExplosion.GetComponentsInChildren<AudioSource>())
+            {
+                audio.enabled = false;
+            }
+        }
         spawnedExplosion.transform.parent = transform;
         this.InvokeDelayed(0.2f, () => preventDuplicateExplosion = false);
         this.InvokeDelayed(0.5f, () => Destroy(spawnedExplosion));
@@ -361,6 +356,13 @@ public class PlayerShip : GameEntity, IPlayerActions
 
         preventDuplicateHullExplosion = true;
         var spawnedExplosion = Instantiate(takeHullDamageExplosion, transform.position, takeHullDamageExplosion.transform.rotation * transform.rotation);
+        if (GameCoordinator.instance.currentSceneType != GameCoordinator.SceneType.Level)
+        {
+            foreach (var audio in spawnedExplosion.GetComponentsInChildren<AudioSource>())
+            {
+                audio.enabled = false;
+            }
+        }
         spawnedExplosion.transform.parent = transform;
         this.InvokeDelayed(0.2f, () => preventDuplicateHullExplosion = false);
         this.InvokeDelayed(0.5f, () => Destroy(spawnedExplosion));
@@ -406,7 +408,7 @@ public class PlayerShip : GameEntity, IPlayerActions
             var displace = Vector3.ProjectOnPlane(transform.position - other.ClosestPoint(transform.position), transform.up);
 
             var previousDisplacement = Vector3.zero;
-            this.TimeLerpValue(0.2f, Vector3.zero, displace, Vector3.Lerp, (displacement) =>
+            this.TimeLerpValue(0.2f, Vector3.zero, displace, (displacement) =>
             {
                 transform.position += displacement - previousDisplacement;
                 previousDisplacement = displacement;
@@ -468,103 +470,33 @@ public class PlayerShip : GameEntity, IPlayerActions
         }
     }
 
-    public void Move()
-    {
-        Vector2 playerInput = inputActions.Player.Move.ReadValue<Vector2>();
-        Vector3 moveDirection = new Vector3(playerInput.x, 0, playerInput.y);
-        if (0.1 < moveDirection.sqrMagnitude)
-        {
-            dashDirection = moveDirection;
-        }
-        transform.position = transform.position + transform.rotation * moveDirection * speed * Time.deltaTime;
-    }
-
     public OnStoppedFiringEventArgs stoppedFiringArgs = new OnStoppedFiringEventArgs();
     public OnStopFiringHandler OnStopFiringListeners;
     public OnStartFiringHandler OnStartFiringListeners;
 
-    void IPlayerActions.OnFire(InputAction.CallbackContext context)
+
+    public void PlayerMove(Vector3 movement)
     {
-        switch (context.phase)
+        transform.position += movement;
+    }
+
+    public void PlayerStartFire()
+    {
+        if (isFiring == false)
         {
-            case InputActionPhase.Disabled:
-                break;
-            case InputActionPhase.Waiting:
-                break;
-            case InputActionPhase.Started:
-                break;
-            case InputActionPhase.Performed:
-                if (isFiring == false)
-                {
-                    stoppedFiringArgs.TotalTimeFired = 0;
-                    OnStartFiringListeners?.Invoke(this);
-                    isFiring = true;
-                    this.InvokeWhile(Fire, () => isFiring);
-                }
-                break;
-            case InputActionPhase.Canceled:
-                isFiring = false;
-                OnStopFiringListeners?.Invoke(this, stoppedFiringArgs);
-                break;
-            default:
-                throw new NotSupportedException("Input Action needs to have it's phase duh...");
+            stoppedFiringArgs.TotalTimeFired = 0;
+            OnStartFiringListeners?.Invoke(this);
+            isFiring = true;
+            this.InvokeWhile(Fire, () => isFiring);
         }
-        //throw new System.NotImplementedException();
     }
 
-    void IPlayerActions.OnLook(InputAction.CallbackContext context)
+    public void PlayerStopFire()
     {
-        //Debug.Log("OnLook");
-        //throw new System.NotImplementedException();
-    }
-
-
-    // can't use this as planned with invocationFlow... canceled is fired just before a new performed meaning there will be 2 flows.
-    void IPlayerActions.OnMove(InputAction.CallbackContext context)
-    {
-        if (Time.timeScale == 0) return;
-
-        //switch (context.phase)
-        //{
-        //    case InputActionPhase.Disabled:
-        //        break;
-        //    case InputActionPhase.Waiting:
-        //        break;
-        //    case InputActionPhase.Started:
-        //        break;
-        //    case InputActionPhase.Performed:
-        //        if(isMoving == false)
-        //        {
-        //            isMoving = true;
-        //            this.InvokeWhile(Move, () => isMoving);
-        //        }
-        //        break;
-        //    case InputActionPhase.Canceled:
-        //        isMoving = false;
-        //        break;
-        //    default:
-        //        throw new NotSupportedException("Input Action needs to have it's phase duh...");
-        //}
-        //throw new System.NotImplementedException();
-    }
-
-    void IPlayerActions.OnDash(InputAction.CallbackContext context)
-    {
-        switch (context.phase)
+        if (isFiring == true)
         {
-            case InputActionPhase.Disabled:
-                break;
-            case InputActionPhase.Waiting:
-                break;
-            case InputActionPhase.Started:
-                break;
-            case InputActionPhase.Performed:
-                TryDash();
-                break;
-            case InputActionPhase.Canceled:
-                break;
-            default:
-                throw new NotSupportedException("Input Action needs to have it's phase duh...");
+            isFiring = false;
+            OnStopFiringListeners?.Invoke(this, stoppedFiringArgs);
         }
     }
 }

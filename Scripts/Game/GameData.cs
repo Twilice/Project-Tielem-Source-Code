@@ -5,8 +5,10 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "Data", menuName = "ScriptableObjects/GameData", order = 1)]
 public class GameData : ScriptableObject
 {
-    public PrimaryWeapon selectedPrimaryWeapon;
+    public Data_PrimaryWeapons data_PrimaryWeapons;
+    public PrimaryWeapon equippedPrimaryWeaponPrefab;
+    [ReadOnlyInInspector]
+    public PrimaryWeapon equippedPrimaryWeapon;
     public int primaryWeaponLevel = 1;
-    public Weapon selectedWeapon1;
-    public Weapon selectedWeapon2;
+    public AudioClip errorSound;
 }

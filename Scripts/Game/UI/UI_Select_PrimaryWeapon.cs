@@ -1,9 +1,11 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
+[Obsolete]
 public class UI_Select_PrimaryWeapon : MonoBehaviour, IPointerEnterHandler, IPointerClickHandler, IPointerExitHandler
 {
     public static List<UI_Select_PrimaryWeapon> ui_weapons = new List<UI_Select_PrimaryWeapon>();
@@ -33,7 +35,7 @@ public class UI_Select_PrimaryWeapon : MonoBehaviour, IPointerEnterHandler, IPoi
         {
             downgradeButton.interactable = false;
         }
-        if(GameCoordinator.instance.data.primaryWeaponLevel == GameCoordinator.instance.data.selectedPrimaryWeapon.weaponSlots.Count)
+        if(GameCoordinator.instance.data.primaryWeaponLevel == GameCoordinator.instance.data.equippedPrimaryWeapon.weaponSlots.Count)
         {
             upgradeButton.interactable = false;
         }
@@ -67,14 +69,14 @@ public class UI_Select_PrimaryWeapon : MonoBehaviour, IPointerEnterHandler, IPoi
 
     public void UpgradeWeapon()
     {
-        GameCoordinator.instance.UpgradePrimaryWeapon();
+        GameCoordinator.instance.data.equippedPrimaryWeapon.UpgradeLevel();
         DisableOutOfBounds();
         levelText.text = GameCoordinator.instance.data.primaryWeaponLevel.ToString();
     }
 
     public void DowngradeWeapon()
     {
-        GameCoordinator.instance.DowngradePrimaryWeapon();
+        GameCoordinator.instance.data.equippedPrimaryWeapon.DowngradeLevel();
         DisableOutOfBounds();
         levelText.text = GameCoordinator.instance.data.primaryWeaponLevel.ToString();
     }

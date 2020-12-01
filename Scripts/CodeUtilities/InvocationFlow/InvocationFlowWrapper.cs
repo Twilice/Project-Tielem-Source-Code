@@ -93,6 +93,12 @@ namespace InvocationFlow
         {
             InvocationFlow<MonoBehaviour>.TimeLerpValue(script, lerpTime, startVal, endVal, func, scaledTime);
         }
+
+        public static void TimeLerpValue(this MonoBehaviour script, float lerpTime, Vector3 startVal, Vector3 endVal, Action<Vector3> func, bool scaledTime = true)
+        {
+            InvocationFlow<MonoBehaviour>.TimeLerpValue<Vector3>(script, lerpTime, startVal, endVal, Vector3.Lerp, func, scaledTime);
+        }
+
         public static void TimeLerpValue<T>(this MonoBehaviour script, float lerpTime, T startVal, T endVal, Func<T, T, float, T> lerpFunction, Action<T> func, bool scaledTime = true)
         {
             InvocationFlow<MonoBehaviour>.TimeLerpValue<T>(script, lerpTime, startVal, endVal, lerpFunction, func, scaledTime);

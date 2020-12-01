@@ -56,6 +56,13 @@ public class Bullet : GameEntity
                 if (explosion != null)
                 {
                     var spawnedExplosion = Instantiate(explosion, transform.position, explosion.transform.rotation * transform.rotation);
+                    if (GameCoordinator.instance.currentSceneType != GameCoordinator.SceneType.Level)
+                    {
+                        foreach (var audio in spawnedExplosion.GetComponentsInChildren<AudioSource>())
+                        {
+                            audio.enabled = false;
+                        }
+                    }
                     Flow.InvokeDelayed(explosionDespawnTime, () => Destroy(spawnedExplosion));
                 }
 
@@ -70,6 +77,13 @@ public class Bullet : GameEntity
                     if (explosion != null)
                     {
                         var spawnedExplosion = Instantiate(explosion, other.attachedRigidbody.transform.position, explosion.transform.rotation * transform.rotation);
+                        if (GameCoordinator.instance.currentSceneType != GameCoordinator.SceneType.Level)
+                        {
+                            foreach (var audio in spawnedExplosion.GetComponentsInChildren<AudioSource>())
+                            {
+                                audio.enabled = false;
+                            }
+                        }
                         Flow.InvokeDelayed(explosionDespawnTime, () => Destroy(spawnedExplosion));
                     }
                 }

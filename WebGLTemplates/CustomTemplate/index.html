@@ -52,8 +52,8 @@
         unityInstance.progress.style.backgroundColor = `rgb(${255 * (1 - progress*3/4)}, 80, ${255 * progress*3/4})`;
       }
       if(progress == 1) {
-        setTimeout(() => { unityInstance.progress.style.transition = "1s ease-in"; unityInstance.progress.style.opacity = 0; }, 1800);
-        setTimeout(() => unityInstance.progress.style.display = "none", 3500);
+        setTimeout(() => { unityInstance.progress.style.transition = "1s ease-in"; unityInstance.progress.style.opacity = 0; }, 1000);
+        setTimeout(() => unityInstance.progress.style.display = "none", 2000);
       }
     }
 

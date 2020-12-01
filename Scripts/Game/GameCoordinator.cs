@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -7,9 +8,22 @@ using UnityEngine.SceneManagement;
 
 public class GameCoordinator : MonoBehaviour
 {
-    public GameData data;
+    [Serializable]
+    public enum SceneType
+    {
+        None,
+        Level,
+        Shop
+    }
 
+    // *** global construct *** 
+    #region construct
+    public GameData data;
     public static GameCoordinator instance;
+    public static bool initialized = false;
+
+    // todo :: coordinator needs mayor overhaul to be able to move back and forth between states.
+
     [RuntimeInitializeOnLoadMethod]
     public static void Construct()
     {
@@ -22,6 +36,7 @@ public class GameCoordinator : MonoBehaviour
         }
         instance.Init();
     }
+    #endregion 
 
 #if UNITY_WEBGL && !UNITY_EDITOR
     [DllImport("__Internal")]
@@ -30,102 +45,166 @@ public class GameCoordinator : MonoBehaviour
     private static extern void SendMessageToBrowser(string message);
 #endif
 
-    public static bool initialized = false;
     public PlayerShip playerShip;
-    public GameField gameField;
-    public int gold;
+    public GameField gameField = null;
+    public int currencyValue { get; set; } = 10000;
 
-    void Awake()
-    {
-        if (this != instance && instance != null)
-        {
-            Destroy(gameObject);
-        }
-
-        // If scene is in buildindex we assume for now that should have a GameCoordinator and PlayerShip. Will probably change in the future if non-game scenes are added.
-        InitLevel();
-    }
-
+    public AudioSource audioSource;
 
     void Init()
     {
         DontDestroyOnLoad(this);
-        Time.timeScale = 0;
+        audioSource = gameObject.AddComponent<AudioSource>();
 
         const string gameDataName = "GameData";
         data = Resources.Load<GameData>(gameDataName);
         if (data == null)
             throw new System.NullReferenceException($"{nameof(GameCoordinator)} {transform.name} - scriptableObject type {nameof(GameData)} with name {gameDataName} is missing.");
         data = Instantiate(data); // don't change the asset object.
-        SceneManager.sceneLoaded += (s, m) => InitLevel();
+        SceneManager.sceneLoaded += (s, m) => SceneChanged(s,m);
+        SceneInit();
         initialized = true;
 #if UNITY_WEBGL && !UNITY_EDITOR
         //SendMessageToBrowser("Hello from the other side!");
         WebGLStartGame();
 #endif
     }
+    public SceneType currentSceneType;
+    void SceneChanged(Scene scene, LoadSceneMode loadMode)
+    {
+      
 
+        SceneInit();
+    }
+
+    void SceneInit()
+    {
+        playerShip = FindObjectOfType<PlayerShip>();
+        gameField = FindObjectOfType<GameField>();
+
+        currentSceneType = DetermineSceneType();
+
+        switch (currentSceneType)
+        {
+            case SceneType.None:
+                break;
+            case SceneType.Level:
+                InitLevel();
+                break;
+            case SceneType.Shop:
+                //InitShopUI(); // note : we wait until resources have loaded, then init.
+                break;
+            default:
+                break;
+        }
+    }
+
+    SceneType DetermineSceneType()
+    {
+        if (playerShip != null && gameField != null)
+            return SceneType.Level;
+
+        if (FindObjectOfType<UI_WeaponShop>() != null)
+            return SceneType.Shop;
+
+        return SceneType.None;
+    }
+
+    #region UI_SHOP
+    private UI_WeaponShop _weaponShop;
+    public UI_WeaponShop weaponShop
+    {
+        get => _weaponShop;
+        set {
+            _weaponShop = value;
+            if (_previewArea != null)
+            {
+                AsyncCreatePortraitRenderers();
+            }
+        }
+    }
+    private UI_PreviewPortrait_Area _previewArea;
+    public UI_PreviewPortrait_Area previewArea
+    {
+        get => _previewArea;
+        set
+        {
+            _previewArea = value;
+            if (_weaponShop != null)
+            {
+                AsyncCreatePortraitRenderers();
+            }
+        }
+    }
+
+    // note :: PortraitRenderers are asynscronous loaded scenes, but objects are dependant. So we have to wait for loading to continue.
+    void AsyncCreatePortraitRenderers()
+    {
+        previewArea.CreatePortraitRenderers(instance.weaponShop.weapons, InitShopUI);
+    }
+
+    void InitShopUI()
+    {
+        weaponShop.Init();
+    }
+    #endregion
+
+    #region LEVEL
     void InitLevel()
     {
+#if DEBUG
         var _playerShips = FindObjectsOfType<PlayerShip>();
         if(_playerShips.Length > 1)
             throw new System.ArgumentOutOfRangeException($"{nameof(GameCoordinator)} \"{transform.name}\" - Multiple playerShips found {_playerShips.JoinStrings((ship) => ship.name)}.");
         else if(_playerShips.Length < 1)
             Debug.LogWarning($"{nameof(GameCoordinator)} {transform.name} - Playership not found.");
-        else
-            playerShip = _playerShips[0];
 
         var _gameFields = FindObjectsOfType<GameField>();
         if (_gameFields.Length > 1)
             throw new System.ArgumentOutOfRangeException($"{nameof(GameCoordinator)} \"{transform.name}\" - Multiple gameFields found {_gameFields.JoinStrings((field) => field.name)}.");
         else if (_gameFields.Length < 1)
             Debug.LogWarning($"{nameof(GameCoordinator)} {transform.name} - gameField not found.");
-        else 
-            gameField = _gameFields[0];
-    }
+#endif
 
-    public void RestartGame()
-    {
-        Time.timeScale = 0;
-        UI_Select_PrimaryWeapon.ui_weapons = new List<UI_Select_PrimaryWeapon>();
-        SceneManager.LoadScene(0);
-    }
-
-    public void StartLevel()
-    {
-        var primaryWeapon = Instantiate(data.selectedPrimaryWeapon);
+        var primaryWeapon = Instantiate(data.equippedPrimaryWeaponPrefab);
+        data.equippedPrimaryWeapon = primaryWeapon;
         primaryWeapon.gameObject.SetActive(false);
         primaryWeapon.ApplyLevel(data.primaryWeaponLevel);
 
         playerShip.RegisterPrimaryWeapon(primaryWeapon);
+    }
+    #endregion
 
-        Time.timeScale = 1;
+    public static bool PlayOneShot(AudioClip audioClip)
+    {
+        if(audioClip != null)
+        {
+            instance.audioSource.PlayOneShot(audioClip);
+            return true;
+        }
+        return false;
     }
 
+    public void RestartGame()
+    {
+        currentLevelIndex = 0;
+        SceneManager.LoadScene(0);
+    }
+
+    public int currentLevelIndex = 0;
+    // temp :: lazy level loading. Should return to shop area then continue on level 2.
+    public void StartLevel()
+    {
+        _weaponShop = null;
+        _previewArea = null;
+        currentLevelIndex++;
+        SceneManager.LoadScene(currentLevelIndex);
+    }
+
+    [Obsolete]
     public void RegisterPrimaryWeapon(PrimaryWeapon primaryWeapon)
     {
-        data.primaryWeaponLevel = 1;
-        data.selectedPrimaryWeapon = primaryWeapon;      
+        data.equippedPrimaryWeapon = primaryWeapon;      
     }
-
-    public void UpgradePrimaryWeapon()
-    {
-        data.primaryWeaponLevel++;
-        if(data.primaryWeaponLevel > 5)
-        {
-            data.primaryWeaponLevel = 5;
-        }
-    }
-
-    public void DowngradePrimaryWeapon()
-    {
-        data.primaryWeaponLevel--;
-        if (data.primaryWeaponLevel < 1)
-        {
-            data.primaryWeaponLevel = 1;
-        }
-    }
-
-
     // todo :: change of state flow -> pause game while shop, during shop change weapon and after shop continue game.
 }

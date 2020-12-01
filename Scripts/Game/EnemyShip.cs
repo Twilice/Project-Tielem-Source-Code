@@ -38,7 +38,7 @@ public class EnemyShip : GameEntity
                 () =>
                 {
                     delayTime -= Time.deltaTime;
-                    return delayTime <= 0;
+                    return delayTime > 0;
                 },
                 () =>
                 {
@@ -76,6 +76,13 @@ public class EnemyShip : GameEntity
             if (explosion != null)
             {
                 var spawnedExplosion = Instantiate(explosion, transform.position, explosion.transform.rotation * transform.rotation);
+                if (GameCoordinator.instance.currentSceneType != GameCoordinator.SceneType.Level)
+                {
+                    foreach (var audio in spawnedExplosion.GetComponentsInChildren<AudioSource>())
+                    {
+                        audio.enabled = false;
+                    }
+                }
                 Flow.InvokeDelayed(3f, () => Destroy(spawnedExplosion));
             }
             Destroy(gameObject);
