@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using InvocationHandle = System.Func<bool>;
 
-namespace InvocationFlow
+namespace TLM.InvocationFlow
 {
     /*
         To get the invocationFlow to work properly the function
@@ -55,7 +55,7 @@ namespace InvocationFlow
                 AddToInvocationFlowDictionary(target, _invokeDelayedUnscaled(delayTime, func));
         }
 
-        public static void InvokeDelayed(TInvokeTarget target, int frames, Action func, bool scaledTime = true)
+        public static void InvokeDelayedFramesInvokeDelayed(TInvokeTarget target, int frames, Action func, bool scaledTime = true)
         {
             if (scaledTime)
                 AddToInvocationFlowDictionary(target, _invokeDelayedScaled(frames, func));

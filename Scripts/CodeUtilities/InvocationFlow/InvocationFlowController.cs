@@ -3,7 +3,7 @@
 using UnityEditor;
 #endif
 
-namespace InvocationFlow.Unity3D
+namespace TLM.InvocationFlow.Unity3D
 {
     /// <summary>
     /// Will iterate all the delegates used in CustomFunctionInvokes

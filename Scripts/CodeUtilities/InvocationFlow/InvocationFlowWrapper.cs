@@ -1,9 +1,9 @@
 ﻿using System;
-using InvocationFlow;
-using InvocationFlow.Unity3D;
+using TLM.InvocationFlow;
+using TLM.InvocationFlow.Unity3D;
 using UnityEngine;
 
-namespace InvocationFlow
+namespace TLM.InvocationFlow.Unity3D
 {
     // Use Flow.InvokeX() if you don't want the invocation to be bound to a specific gameobject. If bound to a gameobject, the invocation will not be executed if gameobject is destroyed.
     public static class Flow
@@ -44,15 +44,15 @@ namespace InvocationFlow
         {
             InvocationFlow<MonoBehaviour>.InvokeDelayed(StaticController, delayTime, func, scaledTime);
         }
-        public static void InvokeDelayed(int delayFrames, Action func, bool scaledTime = true)
+        public static void InvokeDelayedFrames(int delayFrames, Action func, bool scaledTime = true)
         {
-            InvocationFlow<MonoBehaviour>.InvokeDelayed(StaticController, delayFrames, func, scaledTime);
+            InvocationFlow<MonoBehaviour>.InvokeDelayedFramesInvokeDelayed(StaticController, delayFrames, func, scaledTime);
         }
 
         // delay 1 frame
         public static void InvokeDelayed(Action func, bool scaledTime = true)
         {
-            InvocationFlow<MonoBehaviour>.InvokeDelayed(StaticController, 1, func, scaledTime);
+            InvocationFlow<MonoBehaviour>.InvokeDelayedFramesInvokeDelayed(StaticController, 1, func, scaledTime);
         }
 
         public static void TimeLerpValue(float lerpTime, float startVal, float endVal, Action<float> func, bool scaledTime = true)
@@ -99,15 +99,15 @@ namespace InvocationFlow
             InvocationFlow<MonoBehaviour>.InvokeDelayed(script, delayTime, func, scaledTime);
         }
 
-        public static void InvokeDelayed(this MonoBehaviour script, int delayFrames, Action func, bool scaledTime = true)
+        public static void InvokeDelayedFrames(this MonoBehaviour script, int delayFrames, Action func, bool scaledTime = true)
         {
-            InvocationFlow<MonoBehaviour>.InvokeDelayed(script, delayFrames, func, scaledTime);
+            InvocationFlow<MonoBehaviour>.InvokeDelayedFramesInvokeDelayed(script, delayFrames, func, scaledTime);
         }
 
         // delay 1 frame
         public static void InvokeDelayed(this MonoBehaviour script, Action func, bool scaledTime = true)
         {
-            InvocationFlow<MonoBehaviour>.InvokeDelayed(script, 1, func, scaledTime);
+            InvocationFlow<MonoBehaviour>.InvokeDelayedFramesInvokeDelayed(script, 1, func, scaledTime);
         }
 
         public static void TimeLerpValue(this MonoBehaviour script, float lerpTime, float startVal, float endVal, Action<float> func, bool scaledTime = true)
