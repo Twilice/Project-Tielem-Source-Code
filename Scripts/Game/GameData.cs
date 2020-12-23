@@ -11,4 +11,5 @@ public class GameData : ScriptableObject
     public PrimaryWeapon equippedPrimaryWeapon;
     public int primaryWeaponLevel = 1;
     public AudioClip errorSound;
+    public GameObject fadeCanvas;
 }

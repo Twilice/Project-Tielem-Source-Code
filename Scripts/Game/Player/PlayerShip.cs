@@ -51,6 +51,8 @@ public class PlayerShip : GameEntity
 
     private Camera mainCamera;
     public Vector3[] cameraCorners;
+    public Vector3[] cameraCornersDirection;
+
     void Awake()
     {
         InitBaseValues();
@@ -61,11 +63,15 @@ public class PlayerShip : GameEntity
 
         mainCamera = Camera.main;
         cameraCorners = new Vector3[4];
+        cameraCornersDirection = new Vector3[4];
         var distanceBetweenPlayerPlaneCamera = Vector3.Project(mainCamera.transform.position - transform.position, mainCamera.transform.forward).magnitude;
-        mainCamera.CalculateFrustumCorners(new Rect(0, 0, 1, 1), distanceBetweenPlayerPlaneCamera, Camera.MonoOrStereoscopicEye.Mono, cameraCorners);
+        // todo :: make ortohgraphic camera also work
+        
+        mainCamera.CalculateFrustumCorners(new Rect(0,0,1,1), distanceBetweenPlayerPlaneCamera, Camera.MonoOrStereoscopicEye.Mono, cameraCorners);
         for (int i = 0; i < 4; i++)
         {
             cameraCorners[i] = mainCamera.transform.TransformVector(cameraCorners[i]) + mainCamera.transform.position;
+            cameraCornersDirection[i] = cameraCorners[i] - mainCamera.transform.position;
         }
     }
     private void InitBaseValues()
@@ -181,14 +187,18 @@ public class PlayerShip : GameEntity
 
     void Update()
     {
-        for (int i = 0; i < 4; i++)
-        {
-            Debug.DrawRay(mainCamera.transform.position, cameraCorners[i] - mainCamera.transform.position, Color.blue);
-        }
+       
         timeSinceDamageTaken += Time.deltaTime;
         if (isFiring)
+        {
             stoppedFiringArgs.TotalTimeFired += Time.deltaTime;
-        UpdateEnergy();
+            idleTime = 0;
+        }
+        else
+        {
+            idleTime += Time.deltaTime;
+        }
+            UpdateEnergy();
         UpdateShield();
     }
 
@@ -200,6 +210,11 @@ public class PlayerShip : GameEntity
         var topLeft = cameraCorners[1];
         var topRight = cameraCorners[2];
         var bottomRight = cameraCorners[3];
+
+        for (int i = 0; i < 4; i++)
+        {
+            Debug.DrawRay(mainCamera.transform.position, cameraCornersDirection[i], Color.blue);
+        }
 
         // todo :: make rotation independant
 
@@ -470,6 +485,7 @@ public class PlayerShip : GameEntity
         }
     }
 
+    public float idleTime = 0;
     public OnStoppedFiringEventArgs stoppedFiringArgs = new OnStoppedFiringEventArgs();
     public OnStopFiringHandler OnStopFiringListeners;
     public OnStartFiringHandler OnStartFiringListeners;

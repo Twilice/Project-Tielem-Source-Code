@@ -83,8 +83,8 @@ public abstract class PortraitRenderer : MonoBehaviour
             physicsScene = scene.GetPhysicsScene();
             foundCamera = null;
             AudioListener audioListener = null;
-            scene.GetRootGameObjects().FirstOrDefault(go => go.TryFindComponentInChildren(ref foundCamera));
-            scene.GetRootGameObjects().FirstOrDefault(go => go.TryFindComponentInChildren(ref audioListener));
+            scene.GetRootGameObjects().FirstOrDefault(go => go.TryFindComponentInChildren(ref foundCamera, true));
+            scene.GetRootGameObjects().FirstOrDefault(go => go.TryFindComponentInChildren(ref audioListener, true));
 
             audioListener.enabled = false;
 
@@ -127,12 +127,12 @@ public abstract class PortraitRenderer : MonoBehaviour
                     {
                         go.transform.parent = previewSceneRoot.transform;
                     }
-                    foreach (var rend in go.GetComponentsInChildren<Renderer>())
+                    foreach (var rend in go.GetComponentsInChildren<Renderer>(true))
                     {
                         rend.gameObject.layer = layer; // temp error :: until Unity solves the renderLayerMask issue...
                         rend.renderingLayerMask = renderingLayerMask;
                     }
-                    foreach (var audio in go.GetComponentsInChildren<AudioSource>())
+                    foreach (var audio in go.GetComponentsInChildren<AudioSource>(true))
                     {
                         audio.enabled = false;
                     }

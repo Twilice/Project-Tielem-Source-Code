@@ -20,6 +20,12 @@ public class PlayerInputActionListener : MonoBehaviour, IPlayerActions
         inputActions.Player.Enable();
     }
 
+    void OnDestroy()
+    {
+        if (inputActions != null)
+            inputActions.Dispose();
+    }
+
     void Update()
     {
         Move();

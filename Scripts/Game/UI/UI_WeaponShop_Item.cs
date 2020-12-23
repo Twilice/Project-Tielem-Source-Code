@@ -88,13 +88,10 @@ public class UI_WeaponShop_Item : MonoBehaviour
 
     public void SetActivePreview(int level)
     {
+        portraitRenderer.previewSceneRoot.GetComponentInChildren<PrimaryWeapon>().ApplyLevel(level);
         if (previewPortraitArea.currentPortraitRenderer != portraitRenderer)
         {
             previewPortraitArea.SetPortraitRenderer(portraitRenderer);
-        }
-        else
-        {
-            portraitRenderer.previewSceneRoot.GetComponentInChildren<PrimaryWeapon>().ApplyLevel(level);
         }
     }
 

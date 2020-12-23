@@ -5,6 +5,9 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
+using InvocationFlow;
+using Assets.Scripts.CodeUtilities;
 
 public class GameCoordinator : MonoBehaviour
 {
@@ -50,6 +53,7 @@ public class GameCoordinator : MonoBehaviour
     public int currencyValue { get; set; } = 10000;
 
     public AudioSource audioSource;
+    public GameObject sceneLoadCanvas;
 
     void Init()
     {
@@ -61,7 +65,11 @@ public class GameCoordinator : MonoBehaviour
         if (data == null)
             throw new System.NullReferenceException($"{nameof(GameCoordinator)} {transform.name} - scriptableObject type {nameof(GameData)} with name {gameDataName} is missing.");
         data = Instantiate(data); // don't change the asset object.
-        SceneManager.sceneLoaded += (s, m) => SceneChanged(s,m);
+        sceneLoadCanvas = Instantiate(data.fadeCanvas);
+        DontDestroyOnLoad(sceneLoadCanvas);
+
+        SceneFadeIn();
+
         SceneInit();
         initialized = true;
 #if UNITY_WEBGL && !UNITY_EDITOR
@@ -69,12 +77,109 @@ public class GameCoordinator : MonoBehaviour
         WebGLStartGame();
 #endif
     }
+    
     public SceneType currentSceneType;
-    void SceneChanged(Scene scene, LoadSceneMode loadMode)
+    void SceneChangedFadeIn(AsyncOperation _)
     {
-      
+        Application.backgroundLoadingPriority = ThreadPriority.Normal;
 
         SceneInit();
+
+        if (currentSceneType == SceneType.None)
+        {
+            SceneFadeIn();
+        }
+        else if (currentSceneType == SceneType.Shop)
+        {
+            // note: let init shop control event  - maybe a little cleaner to make a onShopInit event and bind to that.
+        }
+        else if (currentSceneType == SceneType.Level)
+        {
+            // todo :: wait for some event to make sure level has loaded in completely? Levels will probably be a bit heavier than other scenes.
+            SceneFadeIn();
+        }
+    }
+    public void SceneFadeOut(AsyncOperation asyncLoad, Action onComplete = null)
+    {
+        var img = sceneLoadCanvas.GetComponentInChildren<Image>();
+        sceneLoadCanvas.SetActive(true);
+        this.TimeLerpValueThen(0.7f, 0, 1.2f,
+        (value) =>
+        {
+            img.color = img.color.CopyWithAlpha(Mathf.Clamp01(value) * Mathf.Clamp01(value));
+        },
+        () =>
+        {
+            if (asyncLoad.progress <= 0.5f)
+            {
+                var slider = sceneLoadCanvas.GetComponentInChildren<Slider>(true);
+                slider.gameObject.SetActive(true);
+                slider.value = 0;
+                var animationSpin = sceneLoadCanvas.GetComponentInChildren<Animator>(true);
+                animationSpin.gameObject.SetActive(true);
+                this.InvokeWhileThen(
+                () =>
+                {
+                    slider.value = asyncLoad.progress.RemapRange(0, 0.9f, 0, 1.0f);
+                },
+                () => asyncLoad.progress != 0.9f,
+                () =>
+                {
+                    slider.value = 1.0f;
+                    asyncLoad.allowSceneActivation = true;
+                });
+            }
+            else
+            {
+                asyncLoad.allowSceneActivation = true;
+            }
+
+        });
+    }
+
+    public void SceneFadeIn(Action onComplete = null)
+    {
+        var animationSpin = sceneLoadCanvas.GetComponentInChildren<Animator>(true);
+        animationSpin.gameObject.SetActive(false);
+        var slider = sceneLoadCanvas.GetComponentInChildren<Slider>(true);
+        slider.gameObject.SetActive(false);
+        var img = sceneLoadCanvas.GetComponentInChildren<Image>();
+        this.TimeLerpValueThen(0.7f, 1, -0.2f, (value) =>
+        {
+            img.color = img.color.CopyWithAlpha(Mathf.Sqrt(Mathf.Clamp01(value)));
+        },
+        () =>
+        {
+            sceneLoadCanvas.SetActive(false);
+            onComplete?.Invoke();
+        });
+    }
+
+    public void LoadSceneFadedOut(int currentLevelIndex)
+    {
+        //Application.backgroundLoadingPriority = ThreadPriority.Low;
+
+        string sceneName;
+        if (currentSceneType == SceneType.Shop)
+        {
+            sceneName = $"Level{currentLevelIndex}";
+        }
+        else
+        {
+            sceneName = "Scene_UIShop";
+        }
+
+        //var async = Addressables.LoadSceneAsync(adressableSceneName, activateOnLoad:false);
+
+        if (Application.CanStreamedLevelBeLoaded(sceneName) == false)
+        {
+            sceneName = "MainMenu";
+            currentLevelIndex = 1;
+        }
+        var async = SceneManager.LoadSceneAsync(sceneName);
+        async.allowSceneActivation = false;
+        async.completed += SceneChangedFadeIn;
+        SceneFadeOut(async);
     }
 
     void SceneInit()
@@ -145,6 +250,7 @@ public class GameCoordinator : MonoBehaviour
 
     void InitShopUI()
     {
+        SceneFadeIn();
         weaponShop.Init();
     }
     #endregion
@@ -188,17 +294,30 @@ public class GameCoordinator : MonoBehaviour
     public void RestartGame()
     {
         currentLevelIndex = 0;
-        SceneManager.LoadScene(0);
+        LoadSceneFadedOut(0);
     }
 
-    public int currentLevelIndex = 0;
+    public int currentLevelIndex { get; set; } = 0;
     // temp :: lazy level loading. Should return to shop area then continue on level 2.
-    public void StartLevel()
+    public void StartLevel(int? overrideLevel = null)
     {
+        // todo :: handle logic between switching between shop and level automatically. Shop should not need to know which level it is not, just send startlevel to coordinator and correct level loads.
         _weaponShop = null;
         _previewArea = null;
-        currentLevelIndex++;
-        SceneManager.LoadScene(currentLevelIndex);
+
+        if (currentSceneType == SceneType.Shop)
+        {
+            if (overrideLevel.HasValue)
+            {
+                currentLevelIndex = overrideLevel.Value;
+            }
+            else
+            {
+                currentLevelIndex++;
+            }
+        }
+        LoadSceneFadedOut(currentLevelIndex);
+
     }
 
     [Obsolete]

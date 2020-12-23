@@ -39,6 +39,9 @@ public class Weapon : GameEntity
 
     public void Awake()
     {
+        if (baseWindUp == 0)
+            woundUp = true;
+
         if (energyConsumer.need != 0)
         {
             energyConsumer.Init(this);
@@ -55,6 +58,9 @@ public class Weapon : GameEntity
         hasFiredThisFiringCycle = false;
         isFiring = true;
         windDown = 0;
+        chargeUp = 0;
+        cooldown = 0;
+
         // todo :: add windupEffect?
     }
     public void StopFiring()
@@ -78,7 +84,9 @@ public class Weapon : GameEntity
         {
             if (hasFiredThisFiringCycle == false)
             {
-                windDown = cooldown + baseWindUp - windUp + baseChargeUp - chargeUp + Time.deltaTime;
+                if (gameObject.activeInHierarchy == false) return;
+                
+                windDown = baseWindUp - windUp + baseChargeUp - chargeUp + Time.deltaTime;
             }
             else StopFiring();
         }
@@ -104,15 +112,17 @@ public class Weapon : GameEntity
             }
         }
     }
+
     private bool hasFiredThisFiringCycle = false;
     public void Fire()
     {
         hasFiredThisFiringCycle = true;
-        cooldown += baseCooldown;
-        chargeUp -= baseChargeUp;
+
+        cooldown += baseCooldown + baseChargeUp;
+        chargeUp = 0;
 
         // todo :: object pooling
-        var firedBullet = Instantiate(bullet, transform.position, bullet.transform.rotation * transform.rotation);
+        var firedBullet = Instantiate(bullet, bullet.transform.position+transform.position, bullet.transform.rotation * transform.rotation);
 
         // note :: don't play audio if we are in mainmenu/shop
         if (GameCoordinator.instance.currentSceneType != GameCoordinator.SceneType.Level)
@@ -138,7 +148,7 @@ public class Weapon : GameEntity
         GameObject spawnedMuzzle = null;
         if(muzzleEffect != null)
         {
-            spawnedMuzzle = Instantiate(muzzleEffect, transform.position, muzzleEffect.transform.rotation * transform.rotation);
+            spawnedMuzzle = Instantiate(muzzleEffect, muzzleEffect.transform.position+transform.position, muzzleEffect.transform.rotation * transform.rotation);
 
        
             if (GameCoordinator.instance.currentSceneType != GameCoordinator.SceneType.Level)
@@ -171,21 +181,25 @@ public class Weapon : GameEntity
             }
         }
     }
-    
+
     public void Update()
     {
-        if (cooldown > 0)
-            cooldown -= Time.deltaTime;
-        else
-            cooldown = 0;        
+        cooldown -= Time.deltaTime;
 
         if (isFiring)
         {
-            windUp += Time.deltaTime;
-            if (windUp >= baseWindUp)
+            if (baseWindUp != 0)
             {
-                windUp = baseWindUp;
-                woundUp = true;
+                windUp += Time.deltaTime;
+                if (windUp >= baseWindUp)
+                {
+                    if (woundUp == false)
+                    {
+                        woundUp = true;
+                        cooldown += windUp;
+                    }
+                    windUp = baseWindUp;
+                }
             }
 
             if(woundUp && cooldown <= 0)
@@ -194,7 +208,7 @@ public class Weapon : GameEntity
                 {
                     if (chargeUpEffect != null)
                     {
-                        var spawnedChargeEffect = Instantiate(chargeUpEffect, transform.position, chargeUpEffect.transform.rotation * transform.rotation);
+                        var spawnedChargeEffect = Instantiate(chargeUpEffect, chargeUpEffect.transform.position+transform.position, chargeUpEffect.transform.rotation * transform.rotation);
                         if (GameCoordinator.instance.currentSceneType != GameCoordinator.SceneType.Level)
                         {
                             foreach (var audio in spawnedChargeEffect.GetComponentsInChildren<AudioSource>())
@@ -216,8 +230,6 @@ public class Weapon : GameEntity
                 }
 
                 chargeUp += Time.deltaTime;
-                if (chargeUp >= baseChargeUp)
-                    chargeUp = baseChargeUp;
             }
         }
 

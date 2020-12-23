@@ -35,9 +35,9 @@ namespace UnityEngine
         /// <param name="go"></param>
         /// <param name="component">Reference to found component</param>
         /// <returns></returns>
-        public static bool TryFindComponentInChildren<T>(this GameObject go, ref T component)
+        public static bool TryFindComponentInChildren<T>(this GameObject go, ref T component, bool includeInactive = false)
         {
-            component = go.GetComponentInChildren<T>();
+            component = go.GetComponentInChildren<T>(includeInactive);
             return component != null;
         }
 

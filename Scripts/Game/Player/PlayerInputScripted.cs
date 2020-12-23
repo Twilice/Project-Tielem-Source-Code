@@ -72,7 +72,14 @@ public class PlayerInputScripted : MonoBehaviour
             case ScriptedInputSequence.InputType.StartFire:
                 playerShip.PlayerStartFire();
                 if (next.duration != 0)
-                    this.InvokeDelayed(next.duration, () => playerShip.PlayerStopFire());
+                    this.InvokeDelayed(next.duration, 
+                        () =>
+                        {
+                            this.InvokeDelayed(() =>
+                            {
+                                playerShip.PlayerStopFire();
+                            });
+                        });
                 break;
             case ScriptedInputSequence.InputType.StopFire:
                 playerShip.PlayerStopFire();

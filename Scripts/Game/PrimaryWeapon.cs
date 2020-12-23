@@ -98,7 +98,7 @@ public class PrimaryWeapon : GameEntity
         isFiring = true;
         if (primaryWeaponWindup > 0) return;
 
-        if (activeWeaponSlot.weapons.Any(weapon => weapon.cooldown != 0))
+        if (activeWeaponSlot.weapons.Any(weapon => weapon.cooldown > 0))
         {
             primaryWeaponWindup = activeWeaponSlot.weapons.Aggregate(0f, (highestCooldown, weapon) => highestCooldown > weapon.baseCooldown + weapon.windDown ? highestCooldown : weapon.baseCooldown + weapon.windDown);
             this.InvokeWhileThen(() => primaryWeaponWindup -= Time.deltaTime, () => primaryWeaponWindup > 0, () =>

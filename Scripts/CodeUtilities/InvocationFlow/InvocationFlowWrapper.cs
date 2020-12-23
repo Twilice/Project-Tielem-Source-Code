@@ -44,6 +44,16 @@ namespace InvocationFlow
         {
             InvocationFlow<MonoBehaviour>.InvokeDelayed(StaticController, delayTime, func, scaledTime);
         }
+        public static void InvokeDelayed(int delayFrames, Action func, bool scaledTime = true)
+        {
+            InvocationFlow<MonoBehaviour>.InvokeDelayed(StaticController, delayFrames, func, scaledTime);
+        }
+
+        // delay 1 frame
+        public static void InvokeDelayed(Action func, bool scaledTime = true)
+        {
+            InvocationFlow<MonoBehaviour>.InvokeDelayed(StaticController, 1, func, scaledTime);
+        }
 
         public static void TimeLerpValue(float lerpTime, float startVal, float endVal, Action<float> func, bool scaledTime = true)
         {
@@ -87,6 +97,17 @@ namespace InvocationFlow
         public static void InvokeDelayed(this MonoBehaviour script, float delayTime, Action func, bool scaledTime = true)
         {
             InvocationFlow<MonoBehaviour>.InvokeDelayed(script, delayTime, func, scaledTime);
+        }
+
+        public static void InvokeDelayed(this MonoBehaviour script, int delayFrames, Action func, bool scaledTime = true)
+        {
+            InvocationFlow<MonoBehaviour>.InvokeDelayed(script, delayFrames, func, scaledTime);
+        }
+
+        // delay 1 frame
+        public static void InvokeDelayed(this MonoBehaviour script, Action func, bool scaledTime = true)
+        {
+            InvocationFlow<MonoBehaviour>.InvokeDelayed(script, 1, func, scaledTime);
         }
 
         public static void TimeLerpValue(this MonoBehaviour script, float lerpTime, float startVal, float endVal, Action<float> func, bool scaledTime = true)
